@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_styles %}
+    <link href="https://cdn.webdatarocks.com/latest/webdatarocks.min.css" rel="stylesheet"/>
+{% endblock %}
+{% block extra_scripts %}
+    <script src="https://cdn.webdatarocks.com/latest/webdatarocks.toolbar.min.js"></script>
+    <script src="https://cdn.webdatarocks.com/latest/webdatarocks.js"></script>
+    <script src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdn.webdatarocks.com/latest/webdatarocks.googlecharts.js"></script>
+
+    <script src="{% static "vendor/underscore/underscore.js" %}"></script>
+    <script src="{% static "assets/js/dashboard.js" %}"></script>
+    <script>
+        $(document).ready(function () {
+            var server_data ={{ data|safe }};
+            var dashboard = new Dashboard();
+            {#dashboard.initialize(server_data);#}
+            var pivot = new WebDataRocks({
+                container: "#jqxGrid",
+                toolbar: true,
+                report: {
+                    dataSource: {
+                        data: server_data
+                    },
+                    "slice": {
+                        "rows": [
+                            {
+                                "uniqueName": "week_of.Year",
+                                "filter": {
+                                    "members": [
+                                        "week_of.Year.2019"
+                                    ]
+                                },
+                                "sort": "desc"
+                            },
+                            {
+                                "uniqueName": "week_of.Month",
+                                "sort": "unsorted"
+                            },
+                            {
+                                "uniqueName": "week_of.Day"
+                            }
+                        ],
+                        "columns": [
+                            {
+                                "uniqueName": "Measures"
+                            },
+                            {
+                                "uniqueName": "company"
+                            }
+                        ],
+                        "measures": [
+                            {
+                                "uniqueName": "vr_units",
+                                "aggregation": "sum"
+                            }
+                        ],
+                        "expands": {
+                            "rows": [
+                                {
+                                    "tuple": [
+                                        "week_of.Year.2018"
+                                    ]
+                                },
+                                {
+                                    "tuple": [
+                                        "week_of.Year.2019"
+                                    ]
+                                },
+                                {
+                                    "tuple": [
+                                        "week_of.Year.2019",
+                                        "week_of.Month.March"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "options": {
+                        "grid": {
+                            "showTotals": "off"
+                        }
+                    }
+                },
+
+                reportcomplete: function () {
+                    pivot.off("reportcomplete");
+                    pivotTableReportComplete = true;
+                    createGoogleChart();
+                }
+            });
+            var pivotTableReportComplete = false;
+            var googleChartsLoaded = false;
+
+            google.charts.load('current', {
+                'packages': ['corechart']
+            });
+            google.charts.setOnLoadCallback(onGoogleChartsLoaded);
+
+            function onGoogleChartsLoaded() {
+                googleChartsLoaded = true;
+                if (pivotTableReportComplete) {
+                    createGoogleChart();
+                }
+            }
+
+            function createGoogleChart() {
+                if (googleChartsLoaded) {
+                    pivot.googlecharts.getData({
+                            type: "line"
+                        },
+                        drawChart
+                    );
+                }
+            }
+
+            function drawChart(_data) {
+                da = dashboard.create_data_for_google_chart(server_data);
+                var data = google.visualization.arrayToDataTable(da);
+                var options = {
+                    title: 'Week Wise VR Units Report',
+                    vAxis: {title: 'VR Units'},
+                    hAxis: {title: 'Week'},
+                    seriesType: 'bars',
+                    series: {5: {type: 'line'}}
+                };
+
+                var chart = new google.visualization.ColumnChart(document.getElementById('jqxChart'));
+                chart.draw(data, options);
+            }
+        });
+        {#$(document).ready(function () {#}
+        {#    var data ={{ data|safe }};#}
+        {#    var dashboard = new Dashboard();#}
+        {#    dashboard.initialize(data);#}
+        {##}
+        {##}
+        {#    // prepare chart data as an array#}
+        {#    var sampleData = [#}
+        {#        {Day: 'Monday', Keith: 30, Erica: 15, George: 25},#}
+        {#        {Day: 'Tuesday', Keith: 25, Erica: 25, George: 30},#}
+        {#        {Day: 'Wednesday', Keith: 30, Erica: 20, George: 25},#}
+        {#        {Day: 'Thursday', Keith: 35, Erica: 25, George: 45},#}
+        {#        {Day: 'Friday', Keith: 20, Erica: 20, George: 25},#}
+        {#        {Day: 'Saturday', Keith: 30, Erica: 20, George: 30},#}
+        {#        {Day: 'Sunday', Keith: 60, Erica: 45, George: 90}#}
+        {#    ];#}
+        {#    // prepare jqxChart settings#}
+        {#    var settings = {#}
+        {#        title: "Fitness & exercise weekly scorecard",#}
+        {#        description: "Time spent in vigorous exercise",#}
+        {#        enableAnimations: true,#}
+        {#        showLegend: true,#}
+        {#        padding: {left: 5, top: 5, right: 5, bottom: 5},#}
+        {#        titlePadding: {left: 90, top: 0, right: 0, bottom: 10},#}
+        {#        source: sampleData,#}
+        {#        xAxis:#}
+        {#            {#}
+        {#                dataField: 'Day',#}
+        {#                gridLines: {visible: true}#}
+        {#            },#}
+        {#        colorScheme: 'scheme01',#}
+        {#        seriesGroups:#}
+        {#            [#}
+        {#                {#}
+        {#                    type: 'column',#}
+        {#                    columnsGapPercent: 50,#}
+        {#                    seriesGapPercent: 0,#}
+        {#                    valueAxis:#}
+        {#                        {#}
+        {#                            visible: true,#}
+        {#                            unitInterval: 10,#}
+        {#                            minValue: 0,#}
+        {#                            maxValue: 100,#}
+        {#                            title: {text: 'Time in minutes'}#}
+        {#                        },#}
+        {#                    series: [#}
+        {#                        {dataField: 'Keith', displayText: 'Keith'},#}
+        {#                        {dataField: 'Erica', displayText: 'Erica'},#}
+        {#                        {dataField: 'George', displayText: 'George'}#}
+        {#                    ]#}
+        {#                }#}
+        {#            ]#}
+        {#    };#}
+        {#    // setup the chart#}
+        {#    $('#jqxChart').jqxChart(settings);#}
+        {#    var adapter = new $.jqx.dataAdapter({#}
+        {#        datafields: [#}
+        {#            {name: "Day", type: "string"},#}
+        {#            {name: "Keith", type: "number"},#}
+        {#            {name: "Erica", type: "number"},#}
+        {#            {name: "George", type: "number"}#}
+        {#        ],#}
+        {#        localdata: sampleData,#}
+        {#        datatype: 'array'#}
+        {#    });#}
+        {#    $("#jqxGrid").jqxGrid({#}
+        {#        width: '100%',#}
+        {#        height: 232,#}
+        {#        filterable: true,#}
+        {#        showfilterrow: true,#}
+        {#        source: adapter,#}
+        {#        columns:#}
+        {#            [#}
+        {#                {#}
+        {#                    text: "Day",#}
+        {#                    width: '40%',#}
+        {#                    datafield: "Day",#}
+        {#                    filteritems: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],#}
+        {#                    filtertype: "checkedlist"#}
+        {#                },#}
+        {#                {text: "Keith", width: '20%', datafield: "Keith"},#}
+        {#                {text: "Erica", width: '20%', datafield: "Erica"},#}
+        {#                {text: "George", width: '20%', datafield: "George"}#}
+        {#            ]#}
+        {#    });#}
+        {#    $("#jqxGrid").on('filter', function () {#}
+        {#        var rows = $("#jqxGrid").jqxGrid('getrows');#}
+        {#        var chart = $('#jqxChart').jqxChart('getInstance');#}
+        {#        chart.source = rows;#}
+        {#        chart.update();#}
+        {#    });#}
+    </script>
+{% endblock extra_scripts %}
+{% block main_content %}
+    <div id="jqxGrid" style="width: 100%"></div>
+    <div id='jqxChart'
+         style="margin-top: 50px; width: 100%; height: 400px; position: relative; left: 0px; top: 0px;"></div>
+{% endblock %}
